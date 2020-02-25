@@ -1,8 +1,10 @@
 
 import java.util.ArrayList;
+import java.util.Collections;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -10,6 +12,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -38,49 +42,46 @@ public class Main extends Application {
     
     @Override
     public void start(Stage primaryStage) {
-        
+
         Group root = new Group();
-        Scene s = new Scene(root, 300, 300, Color.WHITE);
-        
+        Scene s = new Scene(root, 420, 450);
+
         TextField txfFeld = new TextField("2");
         Button btnPfadLoeschen = new Button("Pfad löschen");
         Button btnPfadZeichnen = new Button("Pfad zeichnen");
         CheckBox ckbLoeschen = new CheckBox("Löschen");
         
+        ImageView imgview = new ImageView();
+        Image img = new Image("/aufgabe.jpg");
+        imgview.setImage(img);
+        imgview.setX(0);
+        imgview.setY(30);
+        imgview.setFitHeight(400);
+        imgview.setFitWidth(400);
+
         HBox hbox = new HBox();
         hbox.setSpacing(10);
         
         ObservableList list = hbox.getChildren(); 
         list.addAll(btnPfadLoeschen, btnPfadZeichnen, ckbLoeschen, txfFeld);
 
-        final Canvas canvas = new Canvas(250, 250);
+        final Canvas canvas = new Canvas(400, 400);
+        canvas.setLayoutY(30);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         //gc.setFill(Color.RED);
-        gc.setStroke(Color.BLUE);
+        gc.setStroke(Color.RED);
+        gc.setLineWidth(2);
         
         //Path p = new Path();
         //pfadzeichnen(gc, p);
-        ArrayList< ArrayList<Path>> uberListe = new ArrayList< ArrayList<Path>>();
         ArrayList<Path> pfadListe = new ArrayList<Path>();
-        //ArrayList<Path> pfadListe;
-        
-        canvas.setOnMouseClicked(e -> {});
-
-        canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-            
-            @Override
-            public void handle(MouseEvent event) {
-                
-                //pfadListe = new ArrayList<Path>();
-                
-            }
-        });
-                 
+        Path p = new Path();
+     
         canvas.setOnMousePressed(e -> {
             
             System.out.println("MousePressed Event!");
-            Path p = new Path();
+            //Path p = new Path();
             //System.out.println(e.getClickCount());
             gc.beginPath();
             gc.moveTo(e.getX(), e.getY());
@@ -88,21 +89,45 @@ public class Main extends Application {
             move.setX(e.getX());
             move.setY(e.getY());
             p.getElements().add(move);
-            pfadListe.add(p);
-            gc.stroke();
+            //pfadListe.add(p);
+            //gc.stroke();
   
         });
- 
+
+        //ArrayList<Path> kopieVonPfadListe = new ArrayList<Path>(pfadListe);
+        //Collections.copy(kopieVonPfadListe, pfadListe);
+
         canvas.setOnMouseDragged(e -> {
 
-            System.out.println("Dragged Event!");
-            Path p = new Path();
+            //System.out.println("Dragged Event!");
+            //Path p = new Path();
    
             double x = e.getX();
             double y = e.getY();
+            Path zuEntferndenderPfad = null;
 
             if (ckbLoeschen.isSelected()) {
-                gc.clearRect(x, y, 10, 10);
+                
+                //gc.clearRect(x, y, 10, 10);
+                double positionX = 0;
+                double positionY = 0;
+                
+                for(Path pfadAusListe : pfadListe) {
+                
+                    //if(pfadAusListe.contains(e.getX(), e.getY())) {
+                    if(pfadAusListe.intersects(e.getX(), e.getY(), 5, 5)) {
+                    
+                        positionX = e.getX();
+                        positionY = e.getY();
+                        //pfadListe.remove(pfadAusListe);
+                        zuEntferndenderPfad = pfadAusListe;
+                    
+                    }
+                    
+                }
+                pfadListe.remove(zuEntferndenderPfad);
+                gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                pfadzeichnen(gc, pfadListe, canvas);
 
             } else {
                 gc.lineTo(x, y);
@@ -110,16 +135,15 @@ public class Main extends Application {
                 linie.setX(x);
                 linie.setY(y);
                 p.getElements().add(linie);
-                pfadListe.add(p);
+                //pfadListe.add(p);
                 gc.stroke();
             }
         });
         
         canvas.setOnMouseReleased(e -> {
             
-            uberListe.add(pfadListe);
-            //pfadListe.clear();
-            System.out.println("uberListe: " + (uberListe.size()-1));
+            pfadListe.add(pfadKopieren(p));
+            p.getElements().clear();
 
         });
         
@@ -131,78 +155,74 @@ public class Main extends Application {
         });
         
         btnPfadZeichnen.setOnMouseClicked(e -> {
-            
-            int zeichnungsnummer = new Integer(txfFeld.getText());
-            System.out.println("Zeichnungsnummer: " + zeichnungsnummer);
-            System.out.println("pfadZeichnen lebt");
-            pfadzeichnen(gc, uberListe, canvas);
+
+            pfadzeichnen(gc, pfadListe, canvas);
             
         });
         
  
+        root.getChildren().add(imgview);
         root.getChildren().add(canvas);
         root.getChildren().add(hbox);
-
         primaryStage.setScene(s);
+        
 
         primaryStage.show();
         
     }
+    
+    public Path pfadKopieren(Path p) {
 
-    public void pfadzeichnen(GraphicsContext gc, ArrayList<ArrayList<Path>> uberListe, Canvas canvas) {
+        Path neuerPfad = new Path();
 
-        System.out.println("uberListe: " + uberListe.size());
-        //gc.beginPath();
-        for (int i=0; i < uberListe.size(); i++) {
-            
+        for (int j = 0; j < p.getElements().size(); j++) {
+
+            if ((p.getElements().get(j)) instanceof LineTo) {
+
+                LineTo lineto = (LineTo) (p.getElements().get(j));
+                neuerPfad.getElements().add(lineto);
+
+            } else {
+
+                MoveTo moveto = (MoveTo) (p.getElements().get(j));
+                neuerPfad.getElements().add(moveto);
+
+            }
+        }
+
+        return neuerPfad;
+
+    }
+
+
+    public void pfadzeichnen(GraphicsContext gc, ArrayList<Path> pfadListe, Canvas canvas) {
+
+        System.out.println("pfadListe: " + pfadListe.size());
+
+        for (int i = 0; i < pfadListe.size(); i++) {
             gc.setStroke(Color.RED);
-            gc.beginPath();       
-            ArrayList<Path> pfad = uberListe.get(i);
-            System.out.println("Pfadlänge: " + pfad.size());
-            //MoveTo moveto = (MoveTo) (pfad.get(0).getElements().get(0));
-            //gc.moveTo(moveto.getX(), moveto.getY());
-            for (int j = 1; j < pfad.size(); j++) {
-                if ((pfad.get(j).getElements().get(0)) instanceof LineTo) {
-                    LineTo lineto = (LineTo) (pfad.get(j).getElements().get(0));
+            gc.setLineWidth(2);
+            gc.beginPath();
+            Path pfad = pfadListe.get(i);
+            System.out.println("Pfadlänge: " + pfad.getElements().size());
+            for (int j = 0; j < pfad.getElements().size(); j++) {
+
+                if ((pfad.getElements().get(j)) instanceof LineTo) {
+
+                    LineTo lineto = (LineTo) (pfad.getElements().get(j));
                     gc.lineTo(lineto.getX(), lineto.getY());
+
                 } else {
-                    MoveTo moveto = (MoveTo) (pfad.get(j).getElements().get(0));
+
+                    MoveTo moveto = (MoveTo) (pfad.getElements().get(j));
                     gc.moveTo(moveto.getX(), moveto.getY());
+
                 }
             }
+
             gc.stroke();
         }
 
-//        //gc.beginPath();
-//        ArrayList<Path> p = uberListe.get(1);
-//        //gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-//        System.out.println(p.toString());
-//        
-//        for (Path pfad : p) {
-//            //gc.beginPath();
-//            for (PathElement elem : pfad.getElements()) {
-//
-//                if (elem instanceof MoveTo) {
-//
-//                    gc.moveTo(((MoveTo) elem).getX(), ((MoveTo) elem).getY());
-//                    //gc.stroke();
-//
-//                }
-//
-//                if (elem instanceof LineTo) {
-//
-//                    gc.moveTo(((LineTo) elem).getX(), ((LineTo) elem).getY());
-//                    //gc.stroke();
-//
-//                }
-//            }
-//            //System.out.println("Anzahl der Elemente: " + pfad.getElements().size());
-//
-//            //gc.beginPath();
-//            gc.stroke();
-//        }
-//        
-//        
     }
     
 }
