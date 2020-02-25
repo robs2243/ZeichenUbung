@@ -1,12 +1,16 @@
 
+import java.util.ArrayList;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -38,6 +42,7 @@ public class Main extends Application {
         Group root = new Group();
         Scene s = new Scene(root, 300, 300, Color.WHITE);
         
+        TextField txfFeld = new TextField("2");
         Button btnPfadLoeschen = new Button("Pfad löschen");
         Button btnPfadZeichnen = new Button("Pfad zeichnen");
         CheckBox ckbLoeschen = new CheckBox("Löschen");
@@ -46,7 +51,7 @@ public class Main extends Application {
         hbox.setSpacing(10);
         
         ObservableList list = hbox.getChildren(); 
-        list.addAll(btnPfadLoeschen, btnPfadZeichnen, ckbLoeschen);
+        list.addAll(btnPfadLoeschen, btnPfadZeichnen, ckbLoeschen, txfFeld);
 
         final Canvas canvas = new Canvas(250, 250);
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -54,17 +59,28 @@ public class Main extends Application {
         //gc.setFill(Color.RED);
         gc.setStroke(Color.BLUE);
         
-        Path p = new Path();
+        //Path p = new Path();
         //pfadzeichnen(gc, p);
+        ArrayList< ArrayList<Path>> uberListe = new ArrayList< ArrayList<Path>>();
+        ArrayList<Path> pfadListe = new ArrayList<Path>();
+        //ArrayList<Path> pfadListe;
         
-        canvas.setOnMouseClicked(e -> {
-        
-            System.out.println(e.getClickCount());
+        canvas.setOnMouseClicked(e -> {});
+
+        canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
             
+            @Override
+            public void handle(MouseEvent event) {
+                
+                //pfadListe = new ArrayList<Path>();
+                
+            }
         });
-        
+                 
         canvas.setOnMousePressed(e -> {
             
+            System.out.println("MousePressed Event!");
+            Path p = new Path();
             //System.out.println(e.getClickCount());
             gc.beginPath();
             gc.moveTo(e.getX(), e.getY());
@@ -72,40 +88,54 @@ public class Main extends Application {
             move.setX(e.getX());
             move.setY(e.getY());
             p.getElements().add(move);
+            pfadListe.add(p);
             gc.stroke();
   
         });
-        
-
+ 
         canvas.setOnMouseDragged(e -> {
-            
+
+            System.out.println("Dragged Event!");
+            Path p = new Path();
+   
             double x = e.getX();
             double y = e.getY();
-            
-            if(ckbLoeschen.isSelected()) {
+
+            if (ckbLoeschen.isSelected()) {
                 gc.clearRect(x, y, 10, 10);
-                
-            }
-            else {
+
+            } else {
                 gc.lineTo(x, y);
                 LineTo linie = new LineTo();
                 linie.setX(x);
                 linie.setY(y);
                 p.getElements().add(linie);
+                pfadListe.add(p);
                 gc.stroke();
             }
         });
         
+        canvas.setOnMouseReleased(e -> {
+            
+            uberListe.add(pfadListe);
+            //pfadListe.clear();
+            System.out.println("uberListe: " + (uberListe.size()-1));
+
+        });
+        
+        
         btnPfadLoeschen.setOnMouseClicked(e -> {
         
-            System.out.println(p.toString());
+            gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
         
         });
         
         btnPfadZeichnen.setOnMouseClicked(e -> {
             
+            int zeichnungsnummer = new Integer(txfFeld.getText());
+            System.out.println("Zeichnungsnummer: " + zeichnungsnummer);
             System.out.println("pfadZeichnen lebt");
-            pfadzeichnen(gc, p);
+            pfadzeichnen(gc, uberListe, canvas);
             
         });
         
@@ -119,30 +149,60 @@ public class Main extends Application {
         
     }
 
-    public void pfadzeichnen(GraphicsContext gc, Path p) {
-        
+    public void pfadzeichnen(GraphicsContext gc, ArrayList<ArrayList<Path>> uberListe, Canvas canvas) {
+
+        System.out.println("uberListe: " + uberListe.size());
         //gc.beginPath();
-        System.out.println(p.toString());
-        for (PathElement elem : p.getElements()) {
-
-            if (elem instanceof MoveTo) {
-
-                gc.moveTo(((MoveTo) elem).getX(), ((MoveTo) elem).getY());
-                System.out.println("MoveTO gefunden");
-
-            }
+        for (int i=0; i < uberListe.size(); i++) {
             
-            if (elem instanceof LineTo) {
-
-                gc.moveTo(((LineTo) elem).getX(), ((LineTo) elem).getY());
-                System.out.println("LineTO gefunden");
-
+            gc.setStroke(Color.RED);
+            gc.beginPath();       
+            ArrayList<Path> pfad = uberListe.get(i);
+            System.out.println("Pfadlänge: " + pfad.size());
+            //MoveTo moveto = (MoveTo) (pfad.get(0).getElements().get(0));
+            //gc.moveTo(moveto.getX(), moveto.getY());
+            for (int j = 1; j < pfad.size(); j++) {
+                if ((pfad.get(j).getElements().get(0)) instanceof LineTo) {
+                    LineTo lineto = (LineTo) (pfad.get(j).getElements().get(0));
+                    gc.lineTo(lineto.getX(), lineto.getY());
+                } else {
+                    MoveTo moveto = (MoveTo) (pfad.get(j).getElements().get(0));
+                    gc.moveTo(moveto.getX(), moveto.getY());
+                }
             }
+            gc.stroke();
         }
-        System.out.println("Anzahö der Elemente: " + p.getElements().size());
-        gc.setStroke(Color.RED);
-        gc.stroke();
-        
+
+//        //gc.beginPath();
+//        ArrayList<Path> p = uberListe.get(1);
+//        //gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+//        System.out.println(p.toString());
+//        
+//        for (Path pfad : p) {
+//            //gc.beginPath();
+//            for (PathElement elem : pfad.getElements()) {
+//
+//                if (elem instanceof MoveTo) {
+//
+//                    gc.moveTo(((MoveTo) elem).getX(), ((MoveTo) elem).getY());
+//                    //gc.stroke();
+//
+//                }
+//
+//                if (elem instanceof LineTo) {
+//
+//                    gc.moveTo(((LineTo) elem).getX(), ((LineTo) elem).getY());
+//                    //gc.stroke();
+//
+//                }
+//            }
+//            //System.out.println("Anzahl der Elemente: " + pfad.getElements().size());
+//
+//            //gc.beginPath();
+//            gc.stroke();
+//        }
+//        
+//        
     }
     
 }
